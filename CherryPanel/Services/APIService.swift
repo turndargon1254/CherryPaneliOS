@@ -264,6 +264,69 @@ class APIService: ObservableObject {
         }
         return try await performRequest(request, type: FileContentResponse.self)
     }
+
+    func saveFile(path: String, content: String) async throws -> APIResponse<EmptyResponse> {
+        let body = try JSONEncoder().encode(["path": path, "content": content])
+        guard let request = buildRequest(path: "/api/files/save", method: "POST", body: body) else {
+            throw APIError.invalidURL
+        }
+        return try await performRequest(request, type: APIResponse<EmptyResponse>.self)
+    }
+
+    func uploadFile(from url: URL, to path: String) async throws -> APIResponse<EmptyResponse> {
+        guard let requestURL = URL(string: baseURL + "/api/files/upload") else {
+            throw APIError.invalidURL
+        }
+        var request = URLRequest(url: requestURL)
+        request.httpMethod = "POST"
+
+        let boundary = "Boundary-\(UUID().uuidString)"
+        request.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
+
+        var data = Data()
+        data.append("--\(boundary)\r\n".data(using: .utf8)!)
+        data.append("Content-Disposition: form-data; name=\"path\"\r\n\r\n".data(using: .utf8)!)
+        data.append("\(path)\r\n".data(using: .utf8)!)
+        data.append("--\(boundary)\r\n".data(using: .utf8)!)
+        let filename = url.lastPathComponent
+        data.append("Content-Disposition: form-data; name=\"file\"; filename=\"\(filename)\"\r\n".data(using: .utf8)!)
+        data.append("Content-Type: application/octet-stream\r\n\r\n".data(using: .utf8)!)
+        let fileData = try Data(contentsOf: url)
+        data.append(fileData)
+        data.append("\r\n--\(boundary)--\r\n".data(using: .utf8)!)
+        request.httpBody = data
+        request.setValue("\(data.count)", forHTTPHeaderField: "Content-Length")
+
+        return try await performRequest(request, type: APIResponse<EmptyResponse>.self)
+    }
+
+    func deleteFile(path: String) async throws -> APIResponse<EmptyResponse> {
+        let body = try JSONEncoder().encode(["path": path])
+        guard let request = buildRequest(path: "/api/files/delete", method: "POST", body: body) else {
+            throw APIError.invalidURL
+        }
+        return try await performRequest(request, type: APIResponse<EmptyResponse>.self)
+    }
+
+    func createFolder(path: String) async throws -> APIResponse<EmptyResponse> {
+        let body = try JSONEncoder().encode(["path": path])
+        guard let request = buildRequest(path: "/api/files/folder", method: "POST", body: body) else {
+            throw APIError.invalidURL
+        }
+        return try await performRequest(request, type: APIResponse<EmptyResponse>.self)
+    }
+
+    func downloadFile(path: String) async throws -> Data {
+        let encodedPath = path.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
+        guard let url = URL(string: baseURL + "/api/files/download?path=\(encodedPath)") else {
+            throw APIError.invalidURL
+        }
+        let (data, response) = try await session.data(from: url)
+        guard let http = response as? HTTPURLResponse, (200...299).contains(http.statusCode) else {
+            throw APIError.serverError((response as? HTTPURLResponse)?.statusCode ?? 0, "下载失败")
+        }
+        return data
+    }
     
     // MARK: - Config
     func getConfig() async throws -> ConfigResponse.ServerConfig {

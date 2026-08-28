@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 struct FilesView: View {
     @StateObject private var viewModel = AppViewModel.shared
@@ -106,16 +107,48 @@ struct FilesView: View {
         .navigationTitle("文件管理")
         .sheet(isPresented: $showUpload) {
             UploadView(uploadFiles: $uploadFiles, onUpload: { files in
-                // Handle upload
+                Task {
+                    for url in files {
+                        do {
+                            _ = try await api.uploadFile(from: url, to: viewModel.currentPath)
+                        } catch {
+                            viewModel.refreshError = "上传失败: \(error.localizedDescription)"
+                        }
+                    }
+                    uploadFiles = []
+                    await viewModel.refreshFiles()
+                }
             })
         }
         .sheet(isPresented: $showNewFolder) {
             NewFolderView(folderName: $newFolderName, onCreate: { name in
-                // Create folder
+                Task {
+                    let path = viewModel.currentPath.isEmpty ? name : "\(viewModel.currentPath)/\(name)"
+                    do {
+                        _ = try await api.createFolder(path: path)
+                        newFolderName = ""
+                        await viewModel.refreshFiles()
+                    } catch {
+                        viewModel.refreshError = "创建失败: \(error.localizedDescription)"
+                    }
+                }
             })
         }
         .sheet(item: $editingFile) { file in
             FileEditorView(file: file)
+        }
+        .fileImporter(isPresented: $showUpload, allowedContentTypes: [.item]) { result in
+            // 兼容：如果 sheet 未使用 fileImporter，这里也处理
+            if case .success(let url) = result {
+                Task {
+                    do {
+                        _ = try await api.uploadFile(from: url, to: viewModel.currentPath)
+                        await viewModel.refreshFiles()
+                    } catch {
+                        viewModel.refreshError = "上传失败: \(error.localizedDescription)"
+                    }
+                }
+            }
         }
     }
     
@@ -218,11 +251,42 @@ struct FileItemView: View {
     }
     
     private func downloadFile(_ file: FileItem) {
-        // Implement download
+        Task {
+            do {
+                let data = try await api.downloadFile(path: file.path)
+                // 保存到文件，打开分享面板
+                let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent(file.name)
+                try data.write(to: tempURL)
+                await MainActor.run {
+                    shareFile(url: tempURL)
+                }
+            } catch {
+                await MainActor.run {
+                    viewModel.refreshError = "下载失败: \(error.localizedDescription)"
+                }
+            }
+        }
     }
-    
+
+    private func shareFile(url: URL) {
+        let activityVC = UIActivityViewController(activityItems: [url], applicationActivities: nil)
+        if let scene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+           let rootVC = scene.windows.first?.rootViewController {
+            rootVC.present(activityVC, animated: true)
+        }
+    }
+
     private func deleteFile(_ file: FileItem) {
-        // Implement delete
+        Task {
+            do {
+                _ = try await api.deleteFile(path: file.path)
+                await viewModel.refreshFiles()
+            } catch {
+                await MainActor.run {
+                    viewModel.refreshError = "删除失败: \(error.localizedDescription)"
+                }
+            }
+        }
     }
 }
 
@@ -252,24 +316,24 @@ struct UploadView: View {
     var body: some View {
         NavigationStack {
             VStack(spacing: 20) {
-                // Drop zone
-                VStack(spacing: 12) {
-                    Image(systemName: "arrow.up.doc.fill")
-                        .font(.system(size: 48))
-                        .foregroundColor(.cyan)
-                    Text("点击或拖拽文件至此处")
-                    Text("支持多文件上传")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
+                // Select files button
+                Button {
+                    isImporterPresented = true
+                } label: {
+                    VStack(spacing: 12) {
+                        Image(systemName: "arrow.up.doc.fill")
+                            .font(.system(size: 48))
+                            .foregroundColor(.cyan)
+                        Text("点击选择文件")
+                        Text("支持多文件上传")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                    .frame(maxWidth: .infinity, minHeight: 200)
+                    .background(Color(.secondarySystemGroupedBackground))
+                    .cornerRadius(12)
                 }
-                .frame(maxWidth: .infinity, minHeight: 200)
-                .background(Color(.secondarySystemGroupedBackground))
-                .cornerRadius(12)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 12)
-                        .strokeBorder(style: StrokeStyle(lineWidth: 2, dash: [10]))
-                        .foregroundColor(.cyan)
-                )
+                .buttonStyle(.plain)
                 
                 if !uploadFiles.isEmpty {
                     List {
@@ -304,8 +368,15 @@ struct UploadView: View {
                     Button("取消") { dismiss() }
                 }
             }
+            .fileImporter(isPresented: $isImporterPresented, allowedContentTypes: [.item], allowsMultipleSelection: true) { result in
+                if case .success(let urls) = result {
+                    uploadFiles.append(contentsOf: urls)
+                }
+            }
         }
     }
+    
+    @State private var isImporterPresented = false
     
     private func fileSizeString(for url: URL) -> String {
         let values = try? url.resourceValues(forKeys: [.fileSizeKey])
@@ -411,9 +482,18 @@ struct FileEditorView: View {
     private func saveFile() {
         isSaving = true
         Task {
-            // Implement save
-            isSaving = false
-            dismiss()
+            do {
+                _ = try await api.saveFile(path: file.path, content: content)
+                await MainActor.run {
+                    isSaving = false
+                    dismiss()
+                }
+            } catch {
+                await MainActor.run {
+                    isSaving = false
+                    errorMessage = "保存失败: \(error.localizedDescription)"
+                }
+            }
         }
     }
 }
