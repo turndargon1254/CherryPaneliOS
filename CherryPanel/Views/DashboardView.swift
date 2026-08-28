@@ -8,61 +8,10 @@ struct DashboardView: View {
     
     var body: some View {
         List {
-            // Server Status Section
-            Section("服务器状态") {
-                StatusRow(title: "运行状态", value: viewModel.serverStatus?.running == true ? "🟢 运行中" : "🔴 已停止", icon: "server.rack", color: viewModel.serverStatus?.running == true ? .green : .red)
-                StatusRow(title: "运行时间", value: viewModel.serverStatus?.uptime ?? "--", icon: "clock")
-                StatusRow(title: "PID", value: viewModel.serverStatus?.pid.map(String.init) ?? "--", icon: "number")
-                StatusRow(title: "启动时间", value: viewModel.serverStatus?.startTime?.formatted() ?? "--", icon: "calendar")
-            }
-            
-            // Players Section
-            Section("玩家") {
-                StatusRow(title: "在线人数", value: "\(viewModel.serverMetrics?.playersOnline ?? 0) / \(viewModel.serverMetrics?.playersMax ?? 0)", icon: "person.2.fill", color: .blue)
-                if let players = viewModel.serverMetrics?.playersList, !players.isEmpty {
-                    ForEach(players, id: \.self) { player in
-                        Label(player, systemImage: "person.fill")
-                            .font(.subheadline)
-                    }
-                }
-            }
-            
-            // Performance Section
-            Section("性能指标") {
-                StatusRow(title: "TPS", value: String(format: "%.1f", viewModel.serverMetrics?.tps ?? 0), icon: "speedometer", color: (viewModel.serverMetrics?.tps ?? 0) >= 19.5 ? .green : ((viewModel.serverMetrics?.tps ?? 0) >= 18 ? .yellow : .red))
-                StatusRow(title: "MSPT", value: String(format: "%.1f ms", viewModel.serverMetrics?.mspt ?? 0), icon: "timer", color: (viewModel.serverMetrics?.mspt ?? 0) <= 50 ? .green : .orange)
-                StatusRow(title: "CPU", value: String(format: "%.1f%%", viewModel.serverMetrics?.cpuPercent ?? 0), icon: "cpu", color: (viewModel.serverMetrics?.cpuPercent ?? 0) < 70 ? .green : .orange)
-                StatusRow(title: "内存", value: String(format: "%.1f GB / %.1f GB", (viewModel.serverMetrics?.memoryUsedMB ?? 0)/1024, (viewModel.serverMetrics?.memoryMaxMB ?? 0)/1024), icon: "memorychip")
-                StatusRow(title: "JVM 堆", value: String(format: "%.1f GB / %.1f GB", (viewModel.serverMetrics?.jvmHeapUsedMB ?? 0)/1024, (viewModel.serverMetrics?.jvmHeapMaxMB ?? 0)/1024), icon: "cube.fill")
-                StatusRow(title: "磁盘", value: String(format: "%.1f GB 可用 / %.1f GB 总计", viewModel.serverMetrics?.diskFreeGB ?? 0, viewModel.serverMetrics?.diskTotalGB ?? 0), icon: "externaldrive.fill")
-            }
-            
-            // Quick Actions
-            Section("快速操作") {
-                HStack(spacing: 12) {
-                    ActionButton(title: "启动", icon: "play.fill", color: .green, disabled: viewModel.serverStatus?.running == true) {
-                        showingStartConfirm = true
-                    }
-                    ActionButton(title: "停止", icon: "stop.fill", color: .red, disabled: viewModel.serverStatus?.running != true) {
-                        showingStopConfirm = true
-                    }
-                    ActionButton(title: "重启", icon: "arrow.clockwise", color: .orange, disabled: false) {
-                        showingRestartConfirm = true
-                    }
-                }
-                .confirmationDialog("确定要启动服务器吗？", isPresented: $showingStartConfirm) {
-                    Button("确定", role: .destructive) { Task { await viewModel.startServer() } }
-                    Button("取消", role: .cancel) {}
-                }
-                .confirmationDialog("确定要停止服务器吗？", isPresented: $showingStopConfirm) {
-                    Button("确定", role: .destructive) { Task { await viewModel.stopServer() } }
-                    Button("取消", role: .cancel) {}
-                }
-                .confirmationDialog("确定要重启服务器吗？", isPresented: $showingRestartConfirm) {
-                    Button("确定", role: .destructive) { Task { await viewModel.restartServer() } }
-                    Button("取消", role: .cancel) {}
-                }
-            }
+            statusSection
+            playersSection
+            performanceSection
+            actionSection
         }
         .navigationTitle("CherryPanel")
         .toolbar {
@@ -76,6 +25,88 @@ struct DashboardView: View {
         }
         .refreshable {
             await viewModel.refreshAllData()
+        }
+    }
+
+    private var statusSection: some View {
+        Section("服务器状态") {
+            StatusRow(title: "运行状态", value: statusText, icon: "server.rack", color: isRunning ? .green : .red)
+            StatusRow(title: "运行时间", value: viewModel.serverStatus?.uptime ?? "--", icon: "clock")
+            StatusRow(title: "PID", value: pidText, icon: "number")
+            StatusRow(title: "启动时间", value: viewModel.serverStatus?.startTime ?? "--", icon: "calendar")
+        }
+    }
+
+    private var isRunning: Bool {
+        viewModel.serverStatus?.running == true
+    }
+
+    private var statusText: String {
+        isRunning ? "🟢 运行中" : "🔴 已停止"
+    }
+
+    private var pidText: String {
+        if let pid = viewModel.serverStatus?.pid {
+            return String(pid)
+        }
+        return "--"
+    }
+
+    private var playersSection: some View {
+        Section("玩家") {
+            StatusRow(title: "在线人数", value: "\(viewModel.serverMetrics?.playersOnline ?? 0) / \(viewModel.serverMetrics?.playersMax ?? 0)", icon: "person.2.fill", color: .blue)
+            if let players = viewModel.serverMetrics?.playersList, !players.isEmpty {
+                ForEach(players, id: \.self) { player in
+                    Label(player, systemImage: "person.fill")
+                        .font(.subheadline)
+                }
+            }
+        }
+    }
+
+    private var performanceSection: some View {
+        Section("性能指标") {
+            StatusRow(title: "TPS", value: String(format: "%.1f", viewModel.serverMetrics?.tps ?? 0), icon: "speedometer", color: tpsColor)
+            StatusRow(title: "MSPT", value: String(format: "%.1f ms", viewModel.serverMetrics?.mspt ?? 0), icon: "timer", color: (viewModel.serverMetrics?.mspt ?? 0) <= 50 ? .green : .orange)
+            StatusRow(title: "CPU", value: String(format: "%.1f%%", viewModel.serverMetrics?.cpuPercent ?? 0), icon: "cpu", color: (viewModel.serverMetrics?.cpuPercent ?? 0) < 70 ? .green : .orange)
+            StatusRow(title: "内存", value: String(format: "%.1f GB / %.1f GB", (viewModel.serverMetrics?.memoryUsedMB ?? 0)/1024, (viewModel.serverMetrics?.memoryMaxMB ?? 0)/1024), icon: "memorychip")
+            StatusRow(title: "JVM 堆", value: String(format: "%.1f GB / %.1f GB", (viewModel.serverMetrics?.jvmHeapUsedMB ?? 0)/1024, (viewModel.serverMetrics?.jvmHeapMaxMB ?? 0)/1024), icon: "cube.fill")
+            StatusRow(title: "磁盘", value: String(format: "%.1f GB 可用 / %.1f GB 总计", viewModel.serverMetrics?.diskFreeGB ?? 0, viewModel.serverMetrics?.diskTotalGB ?? 0), icon: "externaldrive.fill")
+        }
+    }
+
+    private var tpsColor: Color {
+        let tps = viewModel.serverMetrics?.tps ?? 0
+        if tps >= 19.5 { return .green }
+        if tps >= 18 { return .yellow }
+        return .red
+    }
+
+    private var actionSection: some View {
+        Section("快速操作") {
+            HStack(spacing: 12) {
+                ActionButton(title: "启动", icon: "play.fill", color: .green, disabled: isRunning) {
+                    showingStartConfirm = true
+                }
+                ActionButton(title: "停止", icon: "stop.fill", color: .red, disabled: !isRunning) {
+                    showingStopConfirm = true
+                }
+                ActionButton(title: "重启", icon: "arrow.clockwise", color: .orange, disabled: false) {
+                    showingRestartConfirm = true
+                }
+            }
+            .confirmationDialog("确定要启动服务器吗？", isPresented: $showingStartConfirm) {
+                Button("确定", role: .destructive) { Task { await viewModel.startServer() } }
+                Button("取消", role: .cancel) {}
+            }
+            .confirmationDialog("确定要停止服务器吗？", isPresented: $showingStopConfirm) {
+                Button("确定", role: .destructive) { Task { await viewModel.stopServer() } }
+                Button("取消", role: .cancel) {}
+            }
+            .confirmationDialog("确定要重启服务器吗？", isPresented: $showingRestartConfirm) {
+                Button("确定", role: .destructive) { Task { await viewModel.restartServer() } }
+                Button("取消", role: .cancel) {}
+            }
         }
     }
 }

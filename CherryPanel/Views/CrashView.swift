@@ -44,99 +44,11 @@ struct CrashView: View {
     
     var body: some View {
         List {
-            // Time Range Selector
-            Section {
-                Picker("时间范围", selection: $timeRange) {
-                    ForEach(TimeRange.allCases, id: \.self) { range in
-                        Text(range.rawValue).tag(range)
-                    }
-                }
-                .pickerStyle(.segmented)
-                .listRowInsets(EdgeInsets())
-                .padding(.vertical, 8)
-            }
-            
-            // Stats Cards
-            Section {
-                LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
-                    CrashStatCard(
-                        title: "总崩溃数",
-                        value: "\(viewModel.crashStats?.totalCrashes ?? 0)",
-                        subtitle: "\(viewModel.crashStats?.recentCrashes5min ?? 0) 个/5分钟",
-                        icon: "exclamationmark.triangle.fill",
-                        color: .red
-                    )
-                    
-                    CrashStatCard(
-                        title: "自动重启",
-                        value: "\(viewModel.crashStats?.autoRestarted ?? 0)",
-                        subtitle: "成功恢复",
-                        icon: "arrow.clockwise",
-                        color: .cyan
-                    )
-                    
-                    CrashStatCard(
-                        title: "最近崩溃",
-                        value: viewModel.crashStats?.lastCrash ?? "无",
-                        subtitle: "",
-                        icon: "clock",
-                        color: .orange
-                    )
-                    
-                    CrashStatCard(
-                        title: "恢复率",
-                        value: (viewModel.crashStats?.totalCrashes ?? 0) > 0 ?
-                            String(format: "%.1f%%", Double(viewModel.crashStats?.autoRestarted ?? 0) / Double(viewModel.crashStats?.totalCrashes ?? 1) * 100) : "0%",
-                        subtitle: "自动恢复率",
-                        icon: "chart.line.uptrend.xyaxis",
-                        color: .purple
-                    )
-                }
-                .padding(.vertical, 8)
-            }
-            
-            // Crash Type Distribution
-            if let stats = viewModel.crashStats, !stats.byType.isEmpty {
-                Section("崩溃类型分布") {
-                    ForEach(Array(stats.byType.keys.sorted()), id: \.self) { type in
-                        let count = stats.byType[type] ?? 0
-                        CrashTypeBar(
-                            type: type,
-                            count: count,
-                            total: stats.totalCrashes,
-                            color: crashTypeColor(type)
-                        )
-                    }
-                }
-            }
-            
-            // Reports List
-            Section {
-                HStack {
-                    Text("崩溃记录 (\(filteredReports.count))")
-                        .font(.headline)
-                    Spacer()
-                    SearchBar(text: $searchText, placeholder: "搜索类型、消息、堆栈...")
-                }
-            }
-            
-            Section {
-                if viewModel.crashReports.isEmpty && viewModel.isRefreshing {
-                    LoadingView()
-                } else if let error = viewModel.refreshError {
-                    ErrorView(message: error, retryAction: {
-                        Task { await viewModel.refreshCrashReports() }
-                    })
-                } else if filteredReports.isEmpty {
-                    EmptyStateView()
-                } else {
-                    ForEach(filteredReports) { report in
-                        CrashReportRow(report: report) {
-                            selectedReport = report
-                        }
-                    }
-                }
-            }
+            timeRangeSection
+            statsSection
+            typeDistributionSection
+            reportHeaderSection
+            reportListSection
         }
         .navigationTitle("崩溃报告")
         .searchable(text: $searchText, prompt: "搜索类型、消息、堆栈...")
@@ -175,13 +87,110 @@ struct CrashView: View {
             CrashDetailView(report: report, viewModel: viewModel)
         }
         .sheet(isPresented: $showSettings) {
-            SettingsView(settings: $settings, onSave: {
-                // Save settings
-            })
+            SettingsView(settings: $settings, onSave: {})
         }
         .task {
             await viewModel.refreshCrashReports()
             await viewModel.refreshCrashStats()
+        }
+    }
+
+    private var timeRangeSection: some View {
+        Section {
+            Picker("时间范围", selection: $timeRange) {
+                ForEach(TimeRange.allCases, id: \.self) { range in
+                    Text(range.rawValue).tag(range)
+                }
+            }
+            .pickerStyle(.segmented)
+            .listRowInsets(EdgeInsets())
+            .padding(.vertical, 8)
+        }
+    }
+
+    private var statsSection: some View {
+        Section {
+            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
+                CrashStatCard(
+                    title: "总崩溃数",
+                    value: "\(viewModel.crashStats?.totalCrashes ?? 0)",
+                    subtitle: "\(viewModel.crashStats?.recentCrashes5min ?? 0) 个/5分钟",
+                    icon: "exclamationmark.triangle.fill",
+                    color: .red
+                )
+                CrashStatCard(
+                    title: "自动重启",
+                    value: "\(viewModel.crashStats?.autoRestarted ?? 0)",
+                    subtitle: "成功恢复",
+                    icon: "arrow.clockwise",
+                    color: .cyan
+                )
+                CrashStatCard(
+                    title: "最近崩溃",
+                    value: viewModel.crashStats?.lastCrash ?? "无",
+                    subtitle: "",
+                    icon: "clock",
+                    color: .orange
+                )
+                CrashStatCard(
+                    title: "恢复率",
+                    value: (viewModel.crashStats?.totalCrashes ?? 0) > 0 ?
+                        String(format: "%.1f%%", Double(viewModel.crashStats?.autoRestarted ?? 0) / Double(viewModel.crashStats?.totalCrashes ?? 1) * 100) : "0%",
+                    subtitle: "自动恢复率",
+                    icon: "chart.line.uptrend.xyaxis",
+                    color: .purple
+                )
+            }
+            .padding(.vertical, 8)
+        }
+    }
+
+    @ViewBuilder
+    private var typeDistributionSection: some View {
+        if let stats = viewModel.crashStats, !stats.byType.isEmpty {
+            Section("崩溃类型分布") {
+                ForEach(Array(stats.byType.keys.sorted()), id: \.self) { type in
+                    let count = stats.byType[type] ?? 0
+                    CrashTypeBar(
+                        type: type,
+                        count: count,
+                        total: stats.totalCrashes,
+                        color: crashTypeColor(type)
+                    )
+                }
+            }
+        }
+    }
+
+    private var reportHeaderSection: some View {
+        Section {
+            HStack {
+                Text("崩溃记录 (\(filteredReports.count))")
+                    .font(.headline)
+                Spacer()
+                SearchBar(text: $searchText, placeholder: "搜索类型、消息、堆栈...")
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var reportListSection: some View {
+        Section {
+            if viewModel.crashReports.isEmpty && viewModel.isRefreshing {
+                LoadingView()
+            } else if let error = viewModel.refreshError {
+                ErrorView(message: error, retryAction: {
+                    Task { await viewModel.refreshCrashReports() }
+                })
+            } else if filteredReports.isEmpty {
+                EmptyStateView()
+            } else {
+                ForEach(filteredReports) { report in
+                    CrashReportRow(report: report) {
+                        selectedReport = report
+                    }
+                }
+            }
         }
     }
     

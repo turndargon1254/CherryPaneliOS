@@ -325,6 +325,8 @@ class APIService: ObservableObject {
 
 // MARK: - Supporting Types
 
+struct EmptyResponse: Codable {}
+
 enum APIError: LocalizedError {
     case invalidURL
     case invalidResponse
