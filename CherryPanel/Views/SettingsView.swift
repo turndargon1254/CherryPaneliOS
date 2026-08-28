@@ -102,7 +102,7 @@ struct SettingsView: View {
                 error: $passwordError,
                 onSave: { form in
                     Task {
-                        let success = await viewModel.changePassword(
+                        let success = await self.changePassword(
                             oldPassword: form.old,
                             newPassword: form.new
                         )
@@ -118,6 +118,30 @@ struct SettingsView: View {
                 }
             )
         }
+    }
+    
+    private func changePassword(oldPassword: String, newPassword: String) async -> Bool {
+        let api = APIService.shared
+        guard let url = URL(string: "\(api.baseURL)/api/change_password") else { return false }
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        if !api.apiKey.isEmpty {
+            request.setValue("Bearer \(api.apiKey)", forHTTPHeaderField: "Authorization")
+        }
+        request.httpBody = try? JSONEncoder().encode([
+            "old_password": oldPassword,
+            "new_password": newPassword
+        ])
+        do {
+            let (_, response) = try await URLSession.shared.data(for: request)
+            if let http = response as? HTTPURLResponse {
+                return (200...299).contains(http.statusCode)
+            }
+        } catch {
+            return false
+        }
+        return false
     }
     
     private func clearAllData() {
@@ -140,7 +164,7 @@ struct SettingsRow: View {
     let subtitle: String
     var iconColor: Color = .cyan
     var showChevron: Bool = true
-    let action: () -> Void
+    var action: () -> Void = {}
     
     var body: some View {
         Button(action: action) {
@@ -196,7 +220,7 @@ struct ChangePasswordView: View {
             Form {
                 Section {
                     SecureField("当前密码", text: $passwordForm.old)
-                        .textContentType(.currentPassword)
+                        .textContentType(.password)
                     SecureField("新密码", text: $passwordForm.new)
                         .textContentType(.newPassword)
                     SecureField("确认新密码", text: $passwordForm.confirm)

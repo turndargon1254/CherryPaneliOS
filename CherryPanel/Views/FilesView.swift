@@ -23,7 +23,7 @@ struct FilesView: View {
                 
                 // Breadcrumb
                 HStack(spacing: 4) {
-                    Button(action: { viewModel.navigateTo("") }) {
+                    Button(action: { viewModel.navigateTo(path: "") }) {
                         Image(systemName: "house.fill")
                             .foregroundColor(.cyan)
                     }
@@ -116,7 +116,7 @@ struct FilesView: View {
             })
         }
         .sheet(item: $editingFile) { file in
-            FileEditorView(file: file, viewModel: viewModel)
+            FileEditorView(file: file)
         }
     }
     
@@ -127,7 +127,7 @@ struct FilesView: View {
     private func navigateToPath(_ component: String) {
         let index = currentPathComponents.firstIndex(of: component) ?? 0
         let path = currentPathComponents.prefix(index + 1).joined(separator: "/")
-        viewModel.navigateTo(path)
+        viewModel.navigateTo(path: path)
     }
 }
 
@@ -160,7 +160,7 @@ struct FileItemView: View {
             // Actions
             HStack(spacing: 8) {
                 if file.isDir {
-                    Button(action: { viewModel.navigateTo(file.path) }) {
+                    Button(action: { viewModel.navigateTo(path: file.path) }) {
                         Image(systemName: "folder")
                     }
                     .buttonStyle(.bordered)
@@ -188,7 +188,7 @@ struct FileItemView: View {
         .cornerRadius(12)
         .onTapGesture {
             if file.isDir {
-                viewModel.navigateTo(file.path)
+                viewModel.navigateTo(path: file.path)
             }
         }
     }
@@ -278,7 +278,7 @@ struct UploadView: View {
                                 Image(systemName: "doc.fill")
                                 Text(uploadFiles[index].lastPathComponent)
                                 Spacer()
-                                Text(ByteCountFormatter.string(fromByteCount: Int64(try? uploadFiles[index].resourceValues(forKeys: [.fileSizeKey]).fileSize ?? 0), countStyle: .file))
+                                Text(fileSizeString(for: uploadFiles[index]))
                                     .foregroundColor(.secondary)
                                 Button(role: .destructive) {
                                     uploadFiles.remove(at: index)
@@ -305,6 +305,12 @@ struct UploadView: View {
                 }
             }
         }
+    }
+    
+    private func fileSizeString(for url: URL) -> String {
+        let values = try? url.resourceValues(forKeys: [.fileSizeKey])
+        let size = values?.fileSize ?? 0
+        return ByteCountFormatter.string(fromByteCount: Int64(size), countStyle: .file)
     }
 }
 
@@ -346,7 +352,7 @@ struct FileEditorView: View {
     @Environment(\.dismiss) var dismiss
     @State private var content = ""
     @State private var isSaving = false
-    @State private var error: String?
+    @State private var errorMessage: String?
     
     private let api = APIService.shared
     
@@ -357,8 +363,8 @@ struct FileEditorView: View {
                     .font(.system(.body, design: .monospaced))
                     .padding()
                 
-                if let error = error {
-                    Text(error)
+                if let errorMessage = errorMessage {
+                    Text(errorMessage)
                         .foregroundColor(.red)
                         .font(.caption)
                         .padding()
@@ -394,8 +400,9 @@ struct FileEditorView: View {
                     content = response.content
                 }
             } catch {
+                let message = "加载失败: \(error.localizedDescription)"
                 await MainActor.run {
-                    error = "加载失败: \(error.localizedDescription)"
+                    errorMessage = message
                 }
             }
         }

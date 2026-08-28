@@ -368,39 +368,6 @@ enum APIError: LocalizedError {
 
 // MARK: - Response Types for New Endpoints
 
-struct AIAnalysisHistory: Codable {
-    let id: Int
-    let timestamp: String
-    let crashReportId: Int?
-    let provider: String
-    let model: String
-    let promptTokens: Int
-    let completionTokens: Int
-    let totalTokens: Int
-    let success: Int
-    let errorMessage: String?
-    let analysisResult: String
-    let suggestedFix: String
-}
-
-struct AIAnalysisStats: Codable {
-    let byProvider: [AIProviderStats]
-    let summary: AIStatsSummary
-}
-
-struct AIProviderStats: Codable {
-    let provider: String
-    let total: Int
-    let successCount: Int
-    let totalPromptTokens: Int
-    let totalCompletionTokens: Int
-}
-
-struct AIStatsSummary: Codable {
-    let total: Int
-    let avgTokens: Double
-}
-
 struct CrashReportsResponse: Codable {
     let success: Bool
     let data: [CrashReport]
@@ -415,27 +382,6 @@ struct CrashReportResponse: Codable {
 struct CrashStatsResponse: Codable {
     let success: Bool
     let data: CrashStats
-}
-
-struct CrashAnalysisHistoryResponse: Codable {
-    let success: Bool
-    let data: [AIAnalysisHistory]
-    let count: Int
-}
-
-struct AIAnalysisHistoryResponse: Codable {
-    let success: Bool
-    let data: [AIAnalysisHistory]
-    let count: Int
-}
-
-struct AIAnalysisStatsResponse: Codable {
-    let success: Bool
-    let data: AIAnalysisStats
-}
-
-struct ProxyRefreshResponse: Codable {
-    let message: String
 }
 
 struct RCONCommandResponse: Codable {

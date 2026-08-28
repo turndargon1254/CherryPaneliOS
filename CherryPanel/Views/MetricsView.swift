@@ -88,8 +88,8 @@ struct MetricsView: View {
                     DetailRow(label: "服务器目录", value: viewModel.statistics?.serverDir ?? "--")
                     DetailRow(label: "JAR 文件", value: viewModel.statistics?.jarFile ?? "--")
                     DetailRow(label: "运行状态", value: status.running ? "🟢 运行中" : "🔴 已停止")
-                    DetailRow(label: "进程 ID", value: status.pid.map(String.init) ?? "--")
-                    DetailRow(label: "启动时间", value: status.startTime?.formatted() ?? "--")
+                    DetailRow(label: "进程 ID", value: status.pid.map { String($0) } ?? "--")
+                    DetailRow(label: "启动时间", value: status.startTime ?? "--")
                     DetailRow(label: "运行时长", value: status.uptime)
                 }
             }
