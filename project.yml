@@ -1,0 +1,55 @@
+name: CherryPanel
+options:
+  bundleIdPrefix: com.cherrypanel
+  deploymentTarget:
+    iOS: "16.0"
+  createIntermediateGroups: true
+
+settings:
+  base:
+    SWIFT_VERSION: "5.9"
+    DEVELOPMENT_TEAM: ""
+    CODE_SIGN_STYLE: Automatic
+    CODE_SIGNING_ALLOWED: "NO"
+
+targets:
+  CherryPanel:
+    type: application
+    platform: iOS
+    sources:
+      - CherryPanel
+    info:
+      path: CherryPanel/Info.plist
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.cherrypanel.app
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_FILE: CherryPanel/Info.plist
+        TARGETED_DEVICE_FAMILY: "1,2"
+        SUPPORTS_MACCATALYST: NO
+        MARKETING_VERSION: "1.0.0"
+        CURRENT_PROJECT_VERSION: "1"
+
+  CherryPanelWidget:
+    type: app-extension
+    platform: iOS
+    sources:
+      - CherryPanel/WidgetExtension
+    info:
+      path: CherryPanel/WidgetExtension/Info.plist
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.cherrypanel.app.WidgetExtension
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_FILE: CherryPanel/WidgetExtension/Info.plist
+
+schemes:
+  CherryPanel:
+    build:
+      targets:
+        CherryPanel: all
+        CherryPanelWidget: [archive]
+    run:
+      config: Debug
+    archive:
+      config: Release
