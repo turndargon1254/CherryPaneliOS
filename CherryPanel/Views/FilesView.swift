@@ -89,13 +89,12 @@ struct FilesView: View {
             ScrollView {
                 LazyVGrid(columns: [GridItem(.adaptive(minimum: 140), spacing: 12)], spacing: 12) {
                     if viewModel.files.isEmpty && !viewModel.isRefreshing {
-                        EmptyStateView()
+                        FilesEmptyStateView()
                             .frame(maxWidth: .infinity)
-                            .gridColumnSpan(1)
                     }
                     
                     ForEach(viewModel.files) { file in
-                        FileItemView(file: file, viewModel: viewModel)
+                        FileItemView(file: file, viewModel: viewModel, editingFile: $editingFile)
                     }
                 }
                 .padding()
@@ -134,6 +133,7 @@ struct FilesView: View {
 struct FileItemView: View {
     let file: FileItem
     @ObservedObject var viewModel: AppViewModel
+    @Binding var editingFile: FileItem?
     
     var body: some View {
         VStack(spacing: 8) {
@@ -165,7 +165,7 @@ struct FileItemView: View {
                     }
                     .buttonStyle(.bordered)
                 } else {
-                    Button(action: { viewModel.editingFile = file }) {
+                    Button(action: { editingFile = file }) {
                         Image(systemName: "pencil")
                     }
                     .buttonStyle(.bordered)
@@ -226,7 +226,7 @@ struct FileItemView: View {
     }
 }
 
-struct EmptyStateView: View {
+struct FilesEmptyStateView: View {
     var body: some View {
         VStack(spacing: 12) {
             Image(systemName: "folder")

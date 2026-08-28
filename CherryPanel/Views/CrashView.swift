@@ -77,7 +77,7 @@ struct CrashView: View {
                     
                     CrashStatCard(
                         title: "最近崩溃",
-                        value: viewModel.crashStats?.lastCrash?.formattedDate() ?? "无",
+                        value: viewModel.crashStats?.lastCrash ?? "无",
                         subtitle: "",
                         icon: "clock",
                         color: .orange
@@ -85,8 +85,8 @@ struct CrashView: View {
                     
                     CrashStatCard(
                         title: "恢复率",
-                        value: viewModel.crashStats?.totalCrashes ?? 0 > 0 ? 
-                            String(format: "%.1f%%", Double(viewModel.crashStats!.autoRestarted) / Double(viewModel.crashStats!.totalCrashes) * 100) : "0%",
+                        value: (viewModel.crashStats?.totalCrashes ?? 0) > 0 ?
+                            String(format: "%.1f%%", Double(viewModel.crashStats?.autoRestarted ?? 0) / Double(viewModel.crashStats?.totalCrashes ?? 1) * 100) : "0%",
                         subtitle: "自动恢复率",
                         icon: "chart.line.uptrend.xyaxis",
                         color: .purple
@@ -408,7 +408,7 @@ struct CrashDetailView: View {
                     
                     Button(action: {
                         Task {
-                            await viewModel.analyzeCrash(id: report.id!)
+                            await viewModel.analyzeCrash(id: report.id)
                         }
                     }) {
                         Label(report.analyzed ? "已分析" : "标记分析", systemImage: "checkmark.circle")

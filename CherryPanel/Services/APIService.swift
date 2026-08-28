@@ -67,8 +67,8 @@ class APIService: ObservableObject {
         
         // Save cookies
         if let url = request.url,
-           let headers = httpResponse.allHeaderFields as? [String: String],
-           let cookies = HTTPCookie.cookies(withResponseHeaderFields: headers, for: url) {
+           let headers = httpResponse.allHeaderFields as? [String: String] {
+            let cookies = HTTPCookie.cookies(withResponseHeaderFields: headers, for: url)
             HTTPCookieStorage.shared.setCookies(cookies, for: url, mainDocumentURL: nil)
         }
         
@@ -324,25 +324,6 @@ class APIService: ObservableObject {
 }
 
 // MARK: - Supporting Types
-struct EmptyResponse: Codable {}
-
-struct LoginRequest: Codable {
-    let username: String
-    let password: String
-}
-
-struct LoginResponse: Codable {
-    let success: Bool
-    let username: String?
-    let role: String?
-    let error: String?
-}
-
-struct CheckSessionResponse: Codable {
-    let authenticated: Bool
-    let username: String?
-    let role: String?
-}
 
 enum APIError: LocalizedError {
     case invalidURL
@@ -368,20 +349,9 @@ enum APIError: LocalizedError {
 
 // MARK: - Response Types for New Endpoints
 
-struct CrashReportsResponse: Codable {
-    let success: Bool
-    let data: [CrashReport]
-    let count: Int
-}
-
 struct CrashReportResponse: Codable {
     let success: Bool
     let data: CrashReport
-}
-
-struct CrashStatsResponse: Codable {
-    let success: Bool
-    let data: CrashStats
 }
 
 struct RCONCommandResponse: Codable {

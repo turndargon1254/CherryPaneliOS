@@ -321,10 +321,8 @@ class AppViewModel: ObservableObject {
             .sink { [weak self] _ in
                 Task { await self?.refreshServerStatus() }
             }
-            .store(in(&cancellables)
+            .store(in: &cancellables)
     }
-    
-    private var cancellables = Set<AnyCancellable>()
     
     deinit {
         logStreamTask?.cancel()

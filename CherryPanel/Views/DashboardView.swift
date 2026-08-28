@@ -29,7 +29,7 @@ struct DashboardView: View {
             
             // Performance Section
             Section("性能指标") {
-                StatusRow(title: "TPS", value: String(format: "%.1f", viewModel.serverMetrics?.tps ?? 0), icon: "speedometer", color: viewModel.serverMetrics?.tps ?? 0 >= 19.5 ? .green : (viewModel.serverMetrics?.tps ?? 0 >= 18 ? .yellow : .red))
+                StatusRow(title: "TPS", value: String(format: "%.1f", viewModel.serverMetrics?.tps ?? 0), icon: "speedometer", color: (viewModel.serverMetrics?.tps ?? 0) >= 19.5 ? .green : ((viewModel.serverMetrics?.tps ?? 0) >= 18 ? .yellow : .red))
                 StatusRow(title: "MSPT", value: String(format: "%.1f ms", viewModel.serverMetrics?.mspt ?? 0), icon: "timer", color: (viewModel.serverMetrics?.mspt ?? 0) <= 50 ? .green : .orange)
                 StatusRow(title: "CPU", value: String(format: "%.1f%%", viewModel.serverMetrics?.cpuPercent ?? 0), icon: "cpu", color: (viewModel.serverMetrics?.cpuPercent ?? 0) < 70 ? .green : .orange)
                 StatusRow(title: "内存", value: String(format: "%.1f GB / %.1f GB", (viewModel.serverMetrics?.memoryUsedMB ?? 0)/1024, (viewModel.serverMetrics?.memoryMaxMB ?? 0)/1024), icon: "memorychip")
