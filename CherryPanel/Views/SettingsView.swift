@@ -40,6 +40,21 @@ struct SettingsView: View {
             
             // Server Config
             Section("服务器配置") {
+                HStack {
+                    TextField("服务器地址", text: $viewModel.serverURL)
+                        .keyboardType(.URL)
+                        .textFieldStyle(.roundedBorder)
+                        .autocapitalization(.none)
+                        .disableAutocorrection(true)
+                    Button("保存") {
+                        viewModel.saveSettings()
+                        Task { await viewModel.refreshAllData() }
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .font(.subheadline)
+                }
+                .padding(.vertical, 4)
+
                 SettingsRow(
                     icon: "folder.fill",
                     title: "服务器目录",
