@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="520">
+    <objects>
+        <object id="1" isa="PBXProject" ...>
+            <!-- Project configuration would go here -->
+        </object>
+    </objects>
+    <rootObject>1</rootObject>
+</project>
