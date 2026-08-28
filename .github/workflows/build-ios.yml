@@ -21,11 +21,6 @@ jobs:
         with:
           xcode-version: '16.2'
 
-      - name: Install iOS runtime (for actool)
-        run: |
-          xcodebuild -downloadPlatform iOS -exportPath /tmp/ios_runtime 2>&1 || echo "runtime download failed, continuing"
-          xcrun simctl runtime list 2>&1 | head -5 || true
-
       - name: Install XcodeGen
         run: brew install xcodegen
 

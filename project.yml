@@ -22,6 +22,7 @@ targets:
           - "WidgetExtension/**"
           - "Info.plist"
           - "ExportOptions.plist"
+          - "Assets.xcassets/**"
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.cherrypanel.app
@@ -33,9 +34,6 @@ targets:
         MARKETING_VERSION: "1.0.0"
         CURRENT_PROJECT_VERSION: "1"
         SWIFT_EMIT_LOC_STRINGS: NO
-        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
-        ASSETCATALOG_COMPILER_GENERATE_ASSET_SYMBOLS: NO
-        ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS: NO
 
   CherryPanelWidget:
     type: app-extension
