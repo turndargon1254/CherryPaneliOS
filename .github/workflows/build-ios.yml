@@ -28,10 +28,7 @@ jobs:
         working-directory: .
         run: xcodegen generate
 
-      - name: Show Xcode version
-        run: xcodebuild -version
-
-      - name: Build iOS App
+      - name: Build iOS App (unsigned)
         working-directory: .
         run: |
           xcodebuild -project CherryPanel.xcodeproj \
@@ -39,17 +36,19 @@ jobs:
             -configuration Release \
             -destination 'generic/platform=iOS' \
             -archivePath ./build/CherryPanel.xcarchive \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
             -quiet \
             archive
 
-      - name: Export IPA
+      - name: Create unsigned IPA (Payload)
         working-directory: .
         run: |
-          xcodebuild -exportArchive \
-            -archivePath ./build/CherryPanel.xcarchive \
-            -exportPath ./build/ipa \
-            -exportOptionsPlist CherryPanel/ExportOptions.plist \
-            -allowProvisioningUpdates
+          mkdir -p build/ipa/Payload
+          cp -R "build/CherryPanel.xcarchive/Products/Applications/CherryPanel.app" build/ipa/Payload/
+          cd build/ipa
+          zip -r CherryPanel.ipa Payload
+          ls -la
 
       - name: Upload IPA Artifact
         uses: actions/upload-artifact@v4
