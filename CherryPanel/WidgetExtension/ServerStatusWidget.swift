@@ -14,7 +14,7 @@ struct ServerStatusWidget: Widget {
     }
 }
 
-struct ServerStatusEntry: TimelineEntry {
+struct ServerStatusEntry: TimelineEntry, Codable {
     let date: Date
     let status: String
     let players: String
@@ -23,14 +23,13 @@ struct ServerStatusEntry: TimelineEntry {
 }
 
 struct ServerStatusProvider: TimelineProvider {
-    let apiService = APIService.shared
-    
+    private let defaults = UserDefaults(suiteName: "group.com.cherrypanel.app")
+
     func placeholder(in context: Context) -> ServerStatusEntry {
         ServerStatusEntry(date: Date(), status: "运行中", players: "5/20", tps: "19.8", isOnline: true)
     }
     
     func getSnapshot(in context: Context, completion: @escaping (ServerStatusEntry) -> Void) {
-        // Try to get cached data
         if let cached = loadCachedEntry() {
             completion(cached)
         } else {
@@ -40,39 +39,59 @@ struct ServerStatusProvider: TimelineProvider {
     
     func getTimeline(in context: Context, completion: @escaping (Timeline<ServerStatusEntry>) -> Void) {
         Task {
-            do {
-                let status = try await APIService.shared.getStatus()
-                let metrics = try await APIService.shared.getMetrics()
-                
-                let entry = ServerStatusEntry(
-                    date: Date(),
-                    status: status.running ? "运行中" : "离线",
-                    players: "\(metrics.playersOnline)/\(metrics.playersMax)",
-                    tps: String(format: "%.1f", metrics.tps),
-                    isOnline: status.running
-                )
-                
-                // Save to shared cache
-                saveEntry(entry)
-                
-                let timeline = Timeline(entries: [entry], policy: .after(Date().addingTimeInterval(300))) // 5 minutes
-                completion(timeline)
-            } catch {
-                // Use cached or placeholder on error
-                let entry = loadCachedEntry() ?? placeholder(in: Context())
-                let timeline = Timeline(entries: [entry], policy: .after(Date().addingTimeInterval(300)))
-                completion(timeline)
+            let entry = await fetchEntry()
+            let timeline = Timeline(entries: [entry], policy: .after(Date().addingTimeInterval(300))) // 5 分钟
+            completion(timeline)
+        }
+    }
+
+    // 使用 Widget 内置 URLSession 直接请求，避免依赖主 App 的 APIService
+    private func fetchEntry() async -> ServerStatusEntry {
+        let baseURL = defaults?.string(forKey: "api_base_url") ?? "http://localhost:22691"
+        let config = URLSessionConfiguration.default
+        config.timeoutIntervalForRequest = 8
+        config.httpCookieStorage = HTTPCookieStorage.shared
+        let session = URLSession(configuration: config)
+
+        var status = WidgetServerStatus(running: false, pid: nil, start_time: nil, uptime: "--", uptime_seconds: 0)
+        var metrics = WidgetServerMetrics(tps: 0, mspt: 0, players_online: 0, players_max: 0)
+
+        // 请求状态
+        if let url = URL(string: baseURL + "/api/status"),
+           let (data, _) = try? await session.data(from: url),
+           let decoded = try? JSONDecoder().decode(WidgetServerStatus.self, from: data) {
+            status = decoded
+        }
+
+        // 请求指标
+        if let url = URL(string: baseURL + "/api/metrics") {
+            struct MetricsWrapper: Decodable {
+                let metrics: WidgetServerMetrics
+            }
+            if let (data, _) = try? await session.data(from: url),
+               let wrapper = try? JSONDecoder().decode(MetricsWrapper.self, from: data) {
+                metrics = wrapper.metrics
             }
         }
+
+        let entry = ServerStatusEntry(
+            date: Date(),
+            status: status.running ? "运行中" : "离线",
+            players: "\(metrics.players_online)/\(metrics.players_max)",
+            tps: String(format: "%.1f", metrics.tps),
+            isOnline: status.running
+        )
+        saveEntry(entry)
+        return entry
     }
     
     private func saveEntry(_ entry: ServerStatusEntry) {
         let data = try? JSONEncoder().encode(entry)
-        UserDefaults(suiteName: "group.com.cherrypanel.app")?.set(data, forKey: "widget_entry")
+        defaults?.set(data, forKey: "widget_entry")
     }
     
     private func loadCachedEntry() -> ServerStatusEntry? {
-        guard let data = UserDefaults(suiteName: "group.com.cherrypanel.app")?.data(forKey: "widget_entry"),
+        guard let data = defaults?.data(forKey: "widget_entry"),
               let entry = try? JSONDecoder().decode(ServerStatusEntry.self, from: data) else {
             return nil
         }
