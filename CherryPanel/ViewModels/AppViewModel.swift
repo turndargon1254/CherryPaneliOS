@@ -69,6 +69,9 @@ class AppViewModel: ObservableObject {
         UserDefaults.standard.set(apiKey, forKey: "api_key")
         api.baseURL = serverURL
         api.apiKey = apiKey
+        // 同步服务器地址到 App Group，供 Widget 使用
+        UserDefaults(suiteName: "group.com.cherrypanel.app")?.set(serverURL, forKey: "api_base_url")
+        UserDefaults(suiteName: "group.com.cherrypanel.app")?.set(apiKey, forKey: "api_key")
     }
     
     // MARK: - Authentication

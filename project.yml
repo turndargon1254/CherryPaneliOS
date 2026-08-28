@@ -23,6 +23,9 @@ targets:
           - "Info.plist"
           - "ExportOptions.plist"
           - "Assets.xcassets/**"
+    dependencies:
+      - target: CherryPanelWidget
+        embed: true
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.cherrypanel.app
@@ -34,6 +37,7 @@ targets:
         MARKETING_VERSION: "1.0.0"
         CURRENT_PROJECT_VERSION: "1"
         SWIFT_EMIT_LOC_STRINGS: NO
+        CODE_SIGN_ENTITLEMENTS: CherryPanel/CherryPanel.entitlements
 
   CherryPanelWidget:
     type: app-extension
@@ -49,6 +53,7 @@ targets:
         INFOPLIST_FILE: CherryPanel/WidgetExtension/Info.plist
         SKIP_INSTALL: YES
         SWIFT_EMIT_LOC_STRINGS: NO
+        CODE_SIGN_ENTITLEMENTS: CherryPanel/CherryPanel.entitlements
 
 schemes:
   CherryPanel:
