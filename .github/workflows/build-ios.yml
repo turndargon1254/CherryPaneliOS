@@ -9,7 +9,7 @@ on:
 jobs:
   build-ios:
     name: Build iOS App
-    runs-on: macos-14
+    runs-on: macos-15
     timeout-minutes: 60
 
     steps:
@@ -19,7 +19,7 @@ jobs:
       - name: Set up Xcode
         uses: maxim-lobanov/setup-xcode@v1
         with:
-          xcode-version: '15.4'
+          xcode-version: '16.2'
 
       - name: Install XcodeGen
         run: brew install xcodegen
