@@ -87,7 +87,7 @@ struct CrashView: View {
             CrashDetailView(report: report, viewModel: viewModel)
         }
         .sheet(isPresented: $showSettings) {
-            SettingsView(settings: $settings, onSave: {})
+            CrashSettingsView(settings: $settings, onSave: {}, onCancel: { showSettings = false })
         }
         .task {
             await viewModel.refreshCrashReports()
