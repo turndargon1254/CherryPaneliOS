@@ -34,6 +34,7 @@ jobs:
           xcodebuild -project CherryPanel.xcodeproj \
             -scheme CherryPanel \
             -configuration Release \
+            -sdk iphoneos \
             -destination 'generic/platform=iOS' \
             -archivePath ./build/CherryPanel.xcarchive \
             CODE_SIGNING_ALLOWED=NO \
