@@ -17,9 +17,11 @@ targets:
     type: application
     platform: iOS
     sources:
-      - CherryPanel
-    info:
-      path: CherryPanel/Info.plist
+      - path: CherryPanel
+        excludes:
+          - "WidgetExtension/**"
+          - "Info.plist"
+          - "ExportOptions.plist"
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.cherrypanel.app
@@ -29,19 +31,22 @@ targets:
         SUPPORTS_MACCATALYST: NO
         MARKETING_VERSION: "1.0.0"
         CURRENT_PROJECT_VERSION: "1"
+        SWIFT_EMIT_LOC_STRINGS: NO
 
   CherryPanelWidget:
     type: app-extension
     platform: iOS
     sources:
-      - CherryPanel/WidgetExtension
-    info:
-      path: CherryPanel/WidgetExtension/Info.plist
+      - path: CherryPanel/WidgetExtension
+        excludes:
+          - "Info.plist"
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.cherrypanel.app.WidgetExtension
         GENERATE_INFOPLIST_FILE: YES
         INFOPLIST_FILE: CherryPanel/WidgetExtension/Info.plist
+        SKIP_INSTALL: YES
+        SWIFT_EMIT_LOC_STRINGS: NO
 
 schemes:
   CherryPanel:
